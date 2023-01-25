@@ -1,3 +1,2 @@
 todo:
- - animation
- - ffmpeg error
+ - paths for binaries and folders

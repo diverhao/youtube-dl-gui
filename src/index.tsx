@@ -11,24 +11,64 @@ import fs from "fs";
 
 let root = ReactDOM.createRoot(document.getElementById("root") as HTMLElement);
 
+const AppErrorPage = () => {
+	useEffect(() => {
+		// process.exit();
+	}, []);
+	return (
+		<div style={{
+            fontFamily: "sans-serif",
+            margin: "30px",
+            fontSize: "15px",
+            userSelect: "none",
+        }}>
+			Error: cannot find <span style={{fontFamily: "monospace"}}> youtube-dl</span> command in following locations:
+			<ul>
+				{youtube_dl_binaries.map((binary: string) => {
+					return <li style={{
+                        margin: "10px 0px",
+                        fontFamily: "monospace",
+                    }}>{binary}</li>;
+				})}
+			</ul>
+            Please install the <span style={{fontFamily: "monospace"}}> youtube-dl</span> to one of above locations.
+		</div>
+	);
+};
+
 const downloadQueue: Download[] = [];
 
+//todo: dynamic variable
 const youtube_dl_path = `${process.env.HOME}/Desktop/youtubeTmp`;
-const youtube_dl_binary = "/opt/homebrew/bin/youtube-dl";
+let youtube_dl_binary = "";
+const youtube_dl_binaries = ["/opt/homebrew/bin/youtube-dl", "/usr/local/bin/youtube-dl", "/usr/bin/youtube-dl"];
+for (const binary of youtube_dl_binaries) {
+	if (fs.existsSync(binary)) {
+		youtube_dl_binary = binary;
+		console.log(`Found youtube-dl at ${binary}`);
+		break;
+	}
+}
+
+window.resizeTo(600, 800);
+let downloadColorIndex = 0;
+
+// ---------------------------------------------------------
 
 const StyledRemoveButton = styled.div<any>`
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	height: 20px;
+	height: 13px;
 	width: fit-content;
-	padding: 8px;
+	padding: 5px;
 	background-color: rgba(0, 100, 180, 0.5);
-	border-radius: 4px;
-	margin-top: 3px;
-	margin-bottom: 3px;
-	margin-right: 6px;
-    user-select: none;
+	border-radius: 3px;
+	margin-top: 2px;
+	margin-bottom: 2px;
+	margin-right: 4px;
+	user-select: none;
+	transition: background-color 200ms;
 
 	&:hover {
 		background-color: rgba(255, 0, 0, 0.5);
@@ -47,8 +87,10 @@ const StyledDownloadEntry = styled.div<any>`
 	margin-top: 5px;
 	margin-bottom: 5px;
 	background-color: rgba(255, 255, 255, 0);
-	border-radius: 4px;
-    user-select: none;
+	border-radius: 3px;
+	user-select: text;
+	transition: background-color 200ms;
+
 	&:hover {
 		background-color: rgba(100, 100, 100, 0.1);
 	}
@@ -63,7 +105,6 @@ const statusBackgroundColors = [
 	"rgba(205, 133, 63, 0.5)",
 	"rgba(64, 224,208, 0.5)",
 	"rgba(154, 205, 50, 0.5)",
-	"rgba(112,128,144,0.5)",
 	"rgba(255, 165, 0, 0.5)",
 	"rgba(128,128,0, 0.5)",
 	"rgba(255, 0, 255, 0.5)",
@@ -77,7 +118,7 @@ class Download {
 	status: "Paused" | "Finished" | "Duplicated" | "Not Started" | "Error" | "Downloading" = "Not Started";
 	ls: any = undefined;
 	destination: string = "";
-	backgroundColor: string = statusBackgroundColors[Math.floor(Math.random() * statusBackgroundColors.length)];
+	backgroundColor: string = statusBackgroundColors[downloadColorIndex++ % statusBackgroundColors.length];
 
 	constructor(link: string, type: "audio" | "video", forceUpdateParent: any, newName: string = "") {
 		this.link = link;
@@ -89,7 +130,7 @@ class Download {
 		} else {
 			let destinationTmp = newName;
 			//todo: add other types
-			if (newName.substring(newName.length - 4) !== ".mp3") {
+			if (type === "audio" && newName.substring(newName.length - 4) !== ".mp3") {
 				destinationTmp = `${newName}.mp3`;
 			}
 			if (path.isAbsolute(destinationTmp)) {
@@ -109,8 +150,7 @@ class Download {
 				if (`${data}`.includes("[download] Destination")) {
 					const data1 = `${data}`.replace("[download] Destination :", "");
 					const data2 = data1.split("[download]")[1];
-					const home = process.env.HOME;
-					const data3 = data2.replace(`${home}/Desktop/youtubeTmp/`, "");
+					const data3 = data2.replace(`${youtube_dl_path}`, "");
 					setDestination(data3);
 				} else {
 					setOutput(`${data}`);
@@ -147,12 +187,29 @@ class Download {
 					style={{
 						width: "80%",
 						backgroundColor: this.backgroundColor,
-						borderRadius: "7px",
-						padding: "10px",
+						borderRadius: "3px",
+						paddingLeft: "8px",
+						paddingRight: "5px",
+						display: "flex",
+						flexDirection: "column",
 					}}
 				>
-					<p>{destination}</p>
-					<p>{output}</p>
+					<div
+						style={{
+							marginTop: "5px",
+							marginBottom: "2px",
+						}}
+					>
+						{destination}
+					</div>
+					<div
+						style={{
+							marginTop: "2px",
+							marginBottom: "5px",
+						}}
+					>
+						{output}
+					</div>
 				</div>
 				<div
 					style={{
@@ -178,6 +235,8 @@ class Download {
 		this.status = "Downloading";
 		const lsOptions: string[] = [];
 		if (this.type === "audio") {
+			// do not use the file header time
+			lsOptions.push("--no-mtime");
 			lsOptions.push("-x");
 			lsOptions.push("--audio-format");
 			lsOptions.push("mp3");
@@ -213,7 +272,6 @@ class Download {
 	resume = () => {
 		this.start();
 		this.forceUpdateParent();
-		// this.setRandom(Math.random());
 	};
 	readonly componentKey: string = Math.random().toString();
 
@@ -262,7 +320,9 @@ const App = () => {
 	const handleStopAll = () => {
 		for (let ii = 0; ii < downloadQueue.length; ii++) {
 			const download = downloadQueue[ii];
-			download.stop();
+			if (download.status === "Downloading") {
+				download.stop();
+			}
 		}
 	};
 	const handleRemoveAll = () => {
@@ -294,10 +354,14 @@ const App = () => {
 	const pasteLink = () => {
 		const link = clipboard.readText();
 		setLinkValue(link);
+		// also clean new name
+		setNewName("");
 	};
 
 	const clearLink = () => {
 		setLinkValue("");
+		// also clean new name
+		setNewName("");
 	};
 
 	const pasteNewName = () => {
@@ -309,36 +373,43 @@ const App = () => {
 		setNewName("");
 	};
 
-    const openFinder = () => {
-        exec(`/usr/bin/open ${youtube_dl_path}`);
-    }
+	const openFinder = () => {
+		exec(`/usr/bin/open ${youtube_dl_path}`);
+	};
 
 	return (
 		<div
 			style={{
 				display: "flex",
 				flexDirection: "column",
-				width: "90%",
-				left: "5%",
+				width: "94%",
+				left: "3%",
 				position: "absolute",
 				fontFamily: "sans-serif",
-				fontSize: "20px",
-                userSelect: "none",
+				fontSize: "13px",
+				userSelect: "none",
 			}}
 		>
 			<div
 				style={{
 					display: "flex",
 					flexDirection: "row",
+					justifyContent: "space-between",
+					width: "100%",
 					alignItems: "center",
 				}}
 			>
-				<h1>Download YouTube</h1> <img src="../src/assets/logo.png" height="45px" />
+				<div
+					style={{
+						display: "flex",
+						flexDirection: "row",
+						alignItems: "center",
+					}}
+				>
+					<h1>Download YouTube</h1> <img src="../src/assets/logo.png" height="45px" />
+				</div>
+				<StyledRemoveButton onClick={openFinder}>Open download folder</StyledRemoveButton>
 			</div>
-            <StyledRemoveButton onClick={openFinder}>
-                Open download folder
-            </StyledRemoveButton>
-
 			<div
 				style={{
 					display: "flex",
@@ -350,14 +421,13 @@ const App = () => {
 				Link:
 				<input
 					type="text"
+					style={{
+						width: "100%",
+						margin: "5px",
+					}}
 					value={linkValue}
 					onChange={handleInputChange}
 					placeholder="Paste YouTube link here"
-					style={{
-						width: "100%",
-						fontSize: "20px",
-						margin: "5px",
-					}}
 				/>
 				<StyledRemoveButton onClick={clearLink}>Clear</StyledRemoveButton>
 				<StyledRemoveButton onClick={pasteLink}>Paste</StyledRemoveButton>
@@ -378,7 +448,6 @@ const App = () => {
 					placeholder="Optional new name"
 					style={{
 						width: "100%",
-						fontSize: "20px",
 						margin: "5px",
 					}}
 				/>
@@ -402,7 +471,6 @@ const App = () => {
 					onChange={handleChangeType}
 					style={{
 						width: "130px",
-						fontSize: "20px",
 						margin: "5px",
 					}}
 				>
@@ -411,60 +479,20 @@ const App = () => {
 				</select>
 			</div>
 
-			<br></br>
 			<div
 				style={{
 					display: "flex",
 					flexFlow: "row",
 					justifyContent: "flex-start",
 					width: "100%",
-					height: "25px",
+					marginTop: "5px",
 				}}
 			>
-				<StyledRemoveButton
-					onClick={handleClick}
-					style={{
-						height: "100%",
-					}}
-				>
-					Click to Download
-				</StyledRemoveButton>
-				<StyledRemoveButton
-					onClick={handleStopAll}
-					style={{
-						height: "100%",
-					}}
-				>
-					Pause All
-				</StyledRemoveButton>
-				<StyledRemoveButton
-					onClick={handleRemoveAll}
-					style={{
-						height: "100%",
-					}}
-				>
-					Remove All
-				</StyledRemoveButton>
-				<StyledRemoveButton
-					onClick={removeFinishedAndErrored}
-					style={{
-						height: "100%",
-					}}
-				>
-					Remove Finished
-				</StyledRemoveButton>
-
-				{/* <button type="button" onClick={handleStopAll}>
-					Pause All
-				</button>
-				<button type="button" onClick={handleRemoveAll}>
-					Remove All
-				</button>
-				<button type="button" onClick={removeFinishedAndErrored}>
-					Remove Finished or Errored
-				</button> */}
+				<StyledRemoveButton onClick={handleClick}>Click to Download</StyledRemoveButton>
+				<StyledRemoveButton onClick={handleStopAll}>Pause All</StyledRemoveButton>
+				<StyledRemoveButton onClick={handleRemoveAll}>Remove All</StyledRemoveButton>
+				<StyledRemoveButton onClick={removeFinishedAndErrored}>Remove Finished</StyledRemoveButton>
 			</div>
-			<p></p>
 			{downloadQueue.map((download: Download) => {
 				return download.getStatusComponent();
 			})}
@@ -472,4 +500,10 @@ const App = () => {
 	);
 };
 
-root.render(<App />);
+// ---------------------------------------------------------
+
+if (youtube_dl_binary === "") {
+	root.render(<AppErrorPage />);
+} else {
+	root.render(<App />);
+}

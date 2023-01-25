@@ -19,6 +19,7 @@ const createWindow = () => {
 		},
 	});
 
+    mainWindow.setResizable(false);
 	// and load the index.html of the app.
 	mainWindow.loadFile("./src/index.html");
 
