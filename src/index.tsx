@@ -1,9 +1,10 @@
 import styled from "styled-components";
 import React, { useCallback, useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
-const { spawn } = require("child_process");
+import { spawn, exec, execSync } from "child_process";
 import path from "path";
-import { clipboard } from "electron";
+import { shell, clipboard } from "electron";
+import fs from "fs";
 // import { StyledRemoveButton } from "./StyledComponents.js";
 
 // ------------------------------
@@ -12,7 +13,7 @@ let root = ReactDOM.createRoot(document.getElementById("root") as HTMLElement);
 
 const downloadQueue: Download[] = [];
 
-const youtube_dl_path = "/Users/1h7/Desktop/youtubeTmp";
+const youtube_dl_path = `${process.env.HOME}/Desktop/youtubeTmp`;
 const youtube_dl_binary = "/opt/homebrew/bin/youtube-dl";
 
 const StyledRemoveButton = styled.div<any>`
@@ -27,6 +28,7 @@ const StyledRemoveButton = styled.div<any>`
 	margin-top: 3px;
 	margin-bottom: 3px;
 	margin-right: 6px;
+    user-select: none;
 
 	&:hover {
 		background-color: rgba(255, 0, 0, 0.5);
@@ -46,7 +48,7 @@ const StyledDownloadEntry = styled.div<any>`
 	margin-bottom: 5px;
 	background-color: rgba(255, 255, 255, 0);
 	border-radius: 4px;
-
+    user-select: none;
 	&:hover {
 		background-color: rgba(100, 100, 100, 0.1);
 	}
@@ -307,6 +309,10 @@ const App = () => {
 		setNewName("");
 	};
 
+    const openFinder = () => {
+        exec(`/usr/bin/open ${youtube_dl_path}`);
+    }
+
 	return (
 		<div
 			style={{
@@ -317,6 +323,7 @@ const App = () => {
 				position: "absolute",
 				fontFamily: "sans-serif",
 				fontSize: "20px",
+                userSelect: "none",
 			}}
 		>
 			<div
@@ -328,6 +335,9 @@ const App = () => {
 			>
 				<h1>Download YouTube</h1> <img src="../src/assets/logo.png" height="45px" />
 			</div>
+            <StyledRemoveButton onClick={openFinder}>
+                Open download folder
+            </StyledRemoveButton>
 
 			<div
 				style={{

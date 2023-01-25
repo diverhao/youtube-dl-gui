@@ -1,0 +1,3 @@
+todo:
+ - animation
+ - ffmpeg error
