@@ -3,8 +3,9 @@ import React, { useCallback, useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { spawn, exec, execSync } from "child_process";
 import path from "path";
-import { shell, clipboard } from "electron";
+import { shell, clipboard, ipcRenderer } from "electron";
 import fs from "fs";
+
 // import { StyledRemoveButton } from "./StyledComponents.js";
 
 // ------------------------------
@@ -16,22 +17,30 @@ const AppErrorPage = () => {
 		// process.exit();
 	}, []);
 	return (
-		<div style={{
-            fontFamily: "sans-serif",
-            margin: "30px",
-            fontSize: "15px",
-            userSelect: "none",
-        }}>
-			Error: cannot find <span style={{fontFamily: "monospace"}}> youtube-dl</span> command in following locations:
+		<div
+			style={{
+				fontFamily: "sans-serif",
+				margin: "30px",
+				fontSize: "15px",
+				userSelect: "none",
+			}}
+		>
+			Error: cannot find <span style={{ fontFamily: "monospace" }}> youtube-dl</span> command in following locations:
 			<ul>
 				{youtube_dl_binaries.map((binary: string) => {
-					return <li style={{
-                        margin: "10px 0px",
-                        fontFamily: "monospace",
-                    }}>{binary}</li>;
+					return (
+						<li
+							style={{
+								margin: "10px 0px",
+								fontFamily: "monospace",
+							}}
+						>
+							{binary}
+						</li>
+					);
 				})}
 			</ul>
-            Please install the <span style={{fontFamily: "monospace"}}> youtube-dl</span> to one of above locations.
+			Please install the <span style={{ fontFamily: "monospace" }}> youtube-dl</span> to one of above locations.
 		</div>
 	);
 };
@@ -55,6 +64,26 @@ let downloadColorIndex = 0;
 
 // ---------------------------------------------------------
 
+const StyledRemoveButtonRed = styled.div<any>`
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	height: 13px;
+	width: fit-content;
+	padding: 5px;
+	background-color: rgba(255, 0, 0, 0.3);
+	border-radius: 3px;
+	margin-top: 2px;
+	margin-bottom: 2px;
+	margin-right: 4px;
+	user-select: none;
+	transition: background-color 200ms;
+
+	&:hover {
+		background-color: rgba(255, 0, 0, 0.5);
+		cursor: pointer;
+	}
+`;
 const StyledRemoveButton = styled.div<any>`
 	display: flex;
 	justify-content: center;
@@ -74,9 +103,6 @@ const StyledRemoveButton = styled.div<any>`
 		background-color: rgba(255, 0, 0, 0.5);
 		cursor: pointer;
 	}
-
-	/* position: relative;
-display: inline-block; */
 `;
 
 const StyledDownloadEntry = styled.div<any>`
@@ -507,3 +533,82 @@ if (youtube_dl_binary === "") {
 } else {
 	root.render(<App />);
 }
+
+ipcRenderer.on("close-window", () => {
+	let popConfirm = false;
+	// determine if there is any active task
+	for (let ii = 0; ii < downloadQueue.length; ii++) {
+		const download = downloadQueue[ii];
+		if (download.status === "Downloading") {
+			popConfirm = true;
+			break;
+		}
+	}
+
+	if (popConfirm) {
+		root.render(
+			<>
+				<App />
+				<div
+					style={{
+						display: "flex",
+						flexDirection: "column",
+						position: "absolute",
+						top: "0px",
+						left: "0px",
+						width: "100%",
+						height: "100%",
+						backgroundColor: "rgba(100,100,100,0.5)",
+						backdropFilter: "blur(6px)",
+						fontFamily: "sans-serif",
+						fontSize: "20px",
+						justifyContent: "center",
+						alignItems: "center",
+						color: "white",
+                        userSelect: "none",
+					}}
+				>
+					<p>Downloading in progress, are you sure to quit?</p>
+					<div
+						style={{
+							display: "flex",
+							flexDirection: "row",
+							justifyContent: "center",
+							alignItems: "center",
+						}}
+					>
+						<StyledRemoveButtonRed
+							style={{
+								height: "20px",
+								padding: "10px",
+                                margin: "10px",
+							}}
+							onClick={() => {
+								// tell main process it is ok to close
+								ipcRenderer.send("close-window-response");
+							}}
+						>
+							Close
+						</StyledRemoveButtonRed>
+						<StyledRemoveButton
+							style={{
+								height: "20px",
+								padding: "10px",
+                                margin: "10px",
+							}}
+							onClick={() => {
+								// no need to tell main process
+								root.render(<App />);
+							}}
+						>
+							Do not close
+						</StyledRemoveButton>
+					</div>
+				</div>
+			</>
+		);
+	} else {
+		ipcRenderer.send("close-window-response");
+	}
+	// root.render(<AppErrorPage />);
+});

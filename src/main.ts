@@ -1,8 +1,10 @@
 // main.js
 
 // Modules to control application life and create native browser window
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
+
+let closeWindow: boolean = false;
 
 const createWindow = () => {
 	// Create the browser window.
@@ -10,18 +12,24 @@ const createWindow = () => {
 		width: 800,
 		height: 600,
 		webPreferences: {
-            nodeIntegration: true,
-            contextIsolation: false,
-            nodeIntegrationInWorker: true,
-            sandbox: false,
-            webviewTag: true,
+			nodeIntegration: true,
+			contextIsolation: false,
+			nodeIntegrationInWorker: true,
+			sandbox: false,
+			webviewTag: true,
 			// preload: path.join(__dirname, "preload.js"),
 		},
 	});
 
-    mainWindow.setResizable(false);
+	mainWindow.setResizable(false);
 	// and load the index.html of the app.
 	mainWindow.loadFile("./src/index.html");
+	mainWindow.on("close", (event) => {
+		if (!closeWindow) {
+            mainWindow.webContents.send("close-window");
+			event.preventDefault();
+		}
+	});
 
 	// Open the DevTools.
 	// mainWindow.webContents.openDevTools()
@@ -45,6 +53,13 @@ app.whenReady().then(() => {
 // explicitly with Cmd + Q.
 app.on("window-all-closed", () => {
 	if (process.platform !== "darwin") app.quit();
+});
+
+ipcMain.on("close-window-response", (event) => {
+	const webContents = event.sender;
+	const win = BrowserWindow.fromWebContents(webContents);
+    closeWindow = true;
+	win?.close();
 });
 
 // In this file you can include the rest of your app's specific main process
