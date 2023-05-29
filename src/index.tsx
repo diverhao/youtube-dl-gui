@@ -50,7 +50,7 @@ const downloadQueue: Download[] = [];
 //todo: dynamic variable
 const youtube_dl_path = `${process.env.HOME}/Desktop/youtubeTmp`;
 let youtube_dl_binary = "";
-const youtube_dl_binaries = ["/opt/homebrew/bin/youtube-dl", "/usr/local/bin/youtube-dl", "/usr/bin/youtube-dl"];
+const youtube_dl_binaries = ["/opt/homebrew/bin/youtube-dlc", "/usr/local/bin/youtube-dlc", "/usr/bin/youtube-dlc"];
 for (const binary of youtube_dl_binaries) {
 	if (fs.existsSync(binary)) {
 		youtube_dl_binary = binary;
