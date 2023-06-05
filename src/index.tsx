@@ -312,7 +312,8 @@ const App = () => {
 	// add it to the downloadQueue
 	// start the download
 	const createDownload = (link: string, type: "audio" | "video", forceUpdate: any, newName: string = "") => {
-		return new Download(link, type, forceUpdate, newName);
+        const linkWoPlaylist = link.split("&list=")[0];
+		return new Download(linkWoPlaylist, type, forceUpdate, newName);
 	};
 
 	const [linkValue, setLinkValue] = useState<string>("");
