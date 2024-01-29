@@ -23,7 +23,8 @@ const createWindow = () => {
 
 	mainWindow.setResizable(false);
 	// and load the index.html of the app.
-	mainWindow.loadFile("./src/index.html");
+    console.log(__dirname)
+	mainWindow.loadFile(path.join(__dirname, "index.html"));
 	mainWindow.on("close", (event) => {
 		if (!closeWindow) {
             mainWindow.webContents.send("close-window");

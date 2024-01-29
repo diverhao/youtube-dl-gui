@@ -433,7 +433,7 @@ const App = () => {
 						alignItems: "center",
 					}}
 				>
-					<h1>Download YouTube</h1> <img src="../src/assets/logo.png" height="45px" />
+					<h1>Download YouTube</h1> <img src="./assets/logo.png" height="45px" />
 				</div>
 				<StyledRemoveButton onClick={openFinder}>Open download folder</StyledRemoveButton>
 			</div>
